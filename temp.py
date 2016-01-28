@@ -91,9 +91,10 @@ for item in movies_list:
 writer_file = open('my_movies','w')
 
 
-for i in range(0,2):
+for i in range(0,len(movies_list)):
     map = find_move_by_name(currectName(movies_list[i][0]))
     if map == None:
+        logging.info("could not find movie by name " + currectName(movies_list[i][0]))
         continue
     map['size'] =  str(movies_list[i][2])
     map['dir'] = movies_list[i][1]
