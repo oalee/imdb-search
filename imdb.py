@@ -53,7 +53,7 @@ def find_detail_by_id(id):
     try:
         movie['metascore'] = hxs.xpath('//*[contains(concat( " ", @class, " " ), concat( " ", "titleReviewBarSubItem", " " ))]//span')[0].text_content()
     except IndexError:
-        movie['metascore'] = 0
+        movie['metascore'] = "0"
 
     return movie
 

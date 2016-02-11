@@ -9,6 +9,8 @@ from imdb import find_move_by_name
 from pathlib import Path
 import subprocess
 import logging
+import os
+from parse import *
 
 logging.basicConfig(level= logging.INFO)
 
@@ -57,7 +59,7 @@ def currectName(name):
 def print_to_file(file,map):
     file.write('title : ' + map['title'] + "\n")
     file.write('rating : ' + map['rating']+ "\n")
-    file.write('metascore : ' + map['metascore']+ "\n")
+    file.write('metascore : ' + str(map['metascore'])+ "\n")
     file.write('year : ' + map['year']+ "\n")
     file.write('genre : ' + str(map['genre'])+ "\n")
     file.write('storyline : ' + map['storyline'])
@@ -65,14 +67,47 @@ def print_to_file(file,map):
     file.write('size : ' + map['size']+ "\n")
     file.write('-------------------------------------\n')
 
+def read_from_raw_file(maps , raw_file):
+    i = 0
+    while not raw_file.tell() == os.fstat(raw_file.fileno()).st_size :
+        map = {}
+        i = int(raw_file.readline())
+        for i in range(0,8):
+            line = raw_file.readline()
+            r = parse("{} : {}" , line)
+            print(r )
+            print(line)
+            map[str(r[0])] = str(r[1])
+            if str(r[0]) == "storyline":
+                map["storyline"] = raw_file.readline()
+            if str(r[0]) == "metascore" and r[1] == "\n":
+                map["metascore"] = 0
+                raw_file.readline()
+                raw_file.readline()
+                raw_file.readline()
+
+        print(map)
+        maps.append(map)
+        raw_file.readline()
+    return i
 
 def du(path):
     """disk usage in human readable format (e.g. '2,1GB')"""
     return subprocess.check_output(['du','-sh', path]).split()[0].decode('utf-8')
 
-
-movie_name = "Toy Story 1"
-#res = find_move_by_name(movie_name)
+def tryToFindMovie(name):
+    try:
+        map = find_move_by_name(name)
+        return map
+    except:
+        print('error happend , skip this y/n ?' )
+        x= "s"
+        while x != "y" or x != "n" :
+            x = input()
+        if x == "y":
+            tryToFindMovie(name)
+        else :
+            return
 
 
 dirs = ['/run/media/al/Data III/Movies' , '/run/media/al/Data/MoviE' ,'/run/media/al/Data/MoviE/2012', '/run/media/al/Data/MoviE/2011 Movies', '/run/media/al/Data/Movies' ,
@@ -89,22 +124,32 @@ for item in movies_list:
     logging.info(item)
 
 writer_file = open('my_movies','w')
+maps = []
 
 
-for i in range(0,len(movies_list)):
-    map = find_move_by_name(currectName(movies_list[i][0]))
-    if map == None:
+t = read_from_raw_file(maps , open('raw_file','r'))
+
+
+
+for i in range(t,0):
+    raw_file = open('raw_file' , 'a')
+    map = tryToFindMovie(currectName(movies_list[i][0]))
+    print(movies_list[i][0] , map)
+
+    if map == None or map['title'] is "":
         logging.info("could not find movie by name " + currectName(movies_list[i][0]))
         continue
     map['size'] =  str(movies_list[i][2])
     map['dir'] = movies_list[i][1]
+    if not 'rating' in map :
+        map['rating'] = 0
     logging.info('got the detail of movie , map is ' + str(map))
+    raw_file.write(str(i) + "\n")
+    print_to_file(raw_file , map)
+    raw_file.close()
+    maps.append(map)
+
+sorted_map = sorted(maps,key = lambda map : -1 * float(map['rating']+"0"))
+for map in sorted_map:
     print_to_file(writer_file , map)
-
-#print_to_file(writer_file , find_move_by_name(currectName(movie_name)))
-#print_to_file(writer_file ,find_move_by_name(currectName('sweeney todd')) )
-#writer_file.close()
-
-
-#for i in movies_list:
-#    writer_file.write(find_move_by_name(currectName(i[0])))
+writer_file.close()
